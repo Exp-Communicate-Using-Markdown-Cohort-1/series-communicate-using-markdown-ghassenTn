@@ -41,4 +41,27 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+/**
+ * Authorize middleware to check user role against allowed roles.
+ * @param {...string} roles - An array of allowed role strings.
+ * @returns {function} Express middleware function.
+ */
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    // Check if req.user and req.user.role exist (should be set by 'protect' middleware)
+    if (!req.user || !req.user.role) {
+      // This indicates a potential setup error (authorize used before protect or protect failed to set user)
+      console.error('RBAC Error: req.user or req.user.role not set. Ensure "protect" middleware runs first.');
+      return res.status(500).json({ message: 'Server error: User context not properly set for authorization.' });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: `Forbidden: Your role ('${req.user.role}') does not have the required permission to access this resource.`,
+      });
+    }
+    next(); // User has one of the allowed roles
+  };
+};
+
+module.exports = { protect, authorize };
